@@ -76,6 +76,17 @@ struct OnboardingView: View {
                         }
                     }
                 }
+
+                VStack(spacing: 6) {
+                    Button("Продолжить без ключа") {
+                        settings.forceMainInterface = true
+                    }
+                    .buttonStyle(.borderless)
+                    Text("Интерфейс, микрофон, голос и все действия можно проверить без ключа: Настройки (⌘,) → вкладка «Проверка». Голосовые команды заработают после ввода ключа.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
             }
             .frame(maxWidth: 560)
             .padding(32)
