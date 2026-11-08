@@ -54,7 +54,8 @@ jobs:
             build 2>&1 | tee xcodebuild.log
       - name: Show errors
         if: failure()
-        run: grep -E "error:|warning: .*concurrency" xcodebuild.log | sort -u | head -100 || true
+        run: |
+          grep -E "error:|warning: .*concurrency" xcodebuild.log | sort -u | head -100 || true
       - name: Upload log
         if: failure()
         uses: actions/upload-artifact@v4
