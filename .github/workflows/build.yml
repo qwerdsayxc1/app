@@ -25,6 +25,11 @@ jobs:
       - name: Build & test
         run: swift test 2>&1 | tee swift-test.log
         shell: bash -o pipefail {0}
+      - name: Annotate errors
+        if: failure()
+        shell: bash
+        run: |
+          bash .github/scripts/annotate-errors.sh swift-test.log
       - name: Upload log
         if: failure()
         uses: actions/upload-artifact@v4
@@ -52,10 +57,11 @@ jobs:
             -destination 'platform=macOS,arch=arm64' \
             CODE_SIGNING_ALLOWED=NO \
             build 2>&1 | tee xcodebuild.log
-      - name: Show errors
+      - name: Annotate errors
         if: failure()
+        shell: bash
         run: |
-          grep -E "error:|warning: .*concurrency" xcodebuild.log | sort -u | head -100 || true
+          bash .github/scripts/annotate-errors.sh xcodebuild.log
       - name: Upload log
         if: failure()
         uses: actions/upload-artifact@v4
