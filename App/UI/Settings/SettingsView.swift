@@ -13,8 +13,10 @@ struct SettingsView: View {
                 .tabItem { Label("Разрешения", systemImage: "lock.shield") }
             MemorySettingsTab()
                 .tabItem { Label("Память", systemImage: "brain") }
+            DiagnosticsTab()
+                .tabItem { Label("Проверка", systemImage: "checklist") }
         }
-        .frame(width: 560, height: 460)
+        .frame(width: 600, height: 520)
     }
 }
 

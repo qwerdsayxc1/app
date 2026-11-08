@@ -11,8 +11,9 @@ final class AppEnvironment {
     let permissions: PermissionsManager
     /// Предупреждение, если постоянная память недоступна (работаем с памятью в RAM).
     let memoryWarning: String?
-
-    private let toolManager: ToolManager
+    /// Прямой доступ к инструментам без Claude — для вкладки «Проверка» и самопроверки.
+    let toolManager: ToolManager
+    let diagnostics: DiagnosticsViewModel
 
     private init() {
         let keychain = KeychainSecretStore()
@@ -64,5 +65,6 @@ final class AppEnvironment {
         self.permissions = permissions
         self.memoryWarning = memoryWarning
         self.toolManager = toolManager
+        self.diagnostics = DiagnosticsViewModel(toolManager: toolManager, voice: voice, settings: settings)
     }
 }

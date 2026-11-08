@@ -39,6 +39,7 @@ struct NOVAApp: App {
             SettingsView()
                 .environment(environment.assistant)
                 .environment(environment.settings)
+                .environment(environment.diagnostics)
                 .preferredColorScheme(.dark)
         }
     }

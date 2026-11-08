@@ -55,6 +55,7 @@ jobs:
             -scheme NOVA \
             -configuration Debug \
             -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             build 2>&1 | tee xcodebuild.log
       - name: Annotate errors
@@ -68,3 +69,37 @@ jobs:
         with:
           name: xcodebuild-log
           path: xcodebuild.log
+
+      # Самопроверка: запуск настоящего приложения на этом Mac без API-ключа.
+      # Отчёт попадает в Summary запуска, скриншоты — в артефакт "self-test".
+      - name: Self-test (UI screenshots + real actions)
+        shell: bash
+        run: |
+          APP="build/Build/Products/Debug/NOVA AI.app"
+          OUT="$PWD/self-test"
+          mkdir -p "$OUT"
+          # Подпись ad-hoc, чтобы macOS разрешила запуск и учла entitlements.
+          codesign --force --deep --sign - --entitlements App/Resources/NOVA.entitlements "$APP" || true
+          "$APP/Contents/MacOS/NOVA AI" --self-test "$OUT" > "$OUT/app-log.txt" 2>&1 &
+          PID=$!
+          for i in $(seq 1 330); do
+            kill -0 "$PID" 2>/dev/null || break
+            sleep 1
+          done
+          kill "$PID" 2>/dev/null || true
+          if [ -f "$OUT/report.md" ]; then
+            cat "$OUT/report.md"
+            cat "$OUT/report.md" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Скриншоты: архив **self-test** в разделе Artifacts ниже." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning title=self-test::Отчёт не создан — смотрите app-log.txt в артефакте self-test"
+            tail -50 "$OUT/app-log.txt" || true
+          fi
+      - name: Upload self-test
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-test
+          path: self-test
+          if-no-files-found: warn

@@ -38,8 +38,12 @@ final class SettingsViewModel {
         refreshPermissions()
     }
 
+    /// Показать основной интерфейс без ключа (самопроверка/скриншоты). Не сохраняется.
+    var forceMainInterface = false
+
     var needsOnboarding: Bool {
-        !hasAPIKey || !settings.cloudProcessingConsent
+        guard !forceMainInterface else { return false }
+        return !hasAPIKey || !settings.cloudProcessingConsent
     }
 
     var availableVoices: [VoiceOption] {

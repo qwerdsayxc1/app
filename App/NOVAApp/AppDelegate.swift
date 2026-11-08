@@ -5,9 +5,24 @@ import NOVACore
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var floatingPanel: FloatingPanelController?
+    private var selfTest: SelfTestRunner?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let environment = AppEnvironment.shared
+
+        // Самопроверка для CI: `NOVA AI --self-test <папка-для-отчёта>`.
+        let arguments = CommandLine.arguments
+        if let index = arguments.firstIndex(of: "--self-test") {
+            let path = arguments.indices.contains(index + 1)
+                ? arguments[index + 1]
+                : FileManager.default.temporaryDirectory.appendingPathComponent("nova-self-test").path
+            let runner = SelfTestRunner(output: URL(fileURLWithPath: path), environment: environment) { [weak self] in
+                self?.toggleFloatingPanel()
+            }
+            selfTest = runner
+            Task { await runner.run() }
+            return
+        }
 
         // Push-to-talk: удерживайте ⌥Space — говорите — отпустите.
         let hotkeys = HotkeyManager.shared

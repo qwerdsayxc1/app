@@ -238,6 +238,19 @@ final class AssistantViewModel: ConfirmationProviding {
         recentCommands = memory.recentCommands(limit: 30)
     }
 
+    // MARK: - Демо-состояние (только для самопроверки и скриншотов, ничего не сохраняет)
+
+    func applyDemoState(status: AssistantStatus, level: Float, transcript: String, reply: String, actions: [String], commands: [CommandRecord]) {
+        self.status = status
+        self.audioLevel = level
+        self.transcript = transcript
+        self.reply = reply
+        self.lastActions = actions
+        self.recentCommands = commands
+        self.history = commands.flatMap { [ChatMessage(role: .user, text: $0.utterance, date: $0.date), ChatMessage(role: .assistant, text: $0.summary, date: $0.date)] }
+        self.errorMessage = nil
+    }
+
     // MARK: - Ошибки и тексты
 
     private func show(_ error: Error) {
