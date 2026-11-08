@@ -109,9 +109,9 @@ final class ExtendedToolsTests: XCTestCase {
         let record = await run(env, "get_date_time")
         let value = try json(record)
         XCTAssertEqual(value["date"]?.stringValue, "2026-03-15")
-        XCTAssertEqual(value["time"]?.stringValue, "14:05")
+        XCTAssertEqual(value["time"]?.stringValue, "15:05", "14:05 UTC → 15:05 в Берлине (зимнее время)")
         XCTAssertEqual(value["weekday"]?.stringValue, "Sunday")
-        XCTAssertEqual(value["time_zone"]?.stringValue, "UTC")
+        XCTAssertEqual(value["time_zone"]?.stringValue, "Europe/Berlin")
     }
 
     func testTimerBoundsAndDefaultLabel() async throws {

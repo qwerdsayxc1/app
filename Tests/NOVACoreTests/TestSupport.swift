@@ -313,7 +313,8 @@ struct FakeEnvironment {
             productivity: productivity,
             settings: { settings },
             now: { now },
-            timeZone: TimeZone(identifier: "UTC")!
+            // Не "UTC": на macOS его identifier — "GMT". Берлин в марте — UTC+1.
+            timeZone: TimeZone(identifier: "Europe/Berlin")!
         )
     }
 
