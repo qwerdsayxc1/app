@@ -27,6 +27,24 @@ public enum ToolName: String, Sendable, CaseIterable, Codable {
     case focusWindow = "focus_window"
     // Проекты
     case openProject = "open_project"
+    // Медиа
+    case playYouTubeVideo = "play_youtube_video"
+    case mediaControl = "media_control"
+    case nowPlaying = "now_playing"
+    // Вкладки браузера
+    case browserTab = "browser_tab"
+    // Продуктивность
+    case getDateTime = "get_date_time"
+    case setTimer = "set_timer"
+    case createReminder = "create_reminder"
+    // Система (дополнительно)
+    case openFolder = "open_folder"
+    case takeScreenshot = "take_screenshot"
+    case setDarkMode = "set_dark_mode"
+    case sleepDisplay = "sleep_display"
+    // Приложения и окна (дополнительно)
+    case hideApplication = "hide_application"
+    case windowAction = "window_action"
 }
 
 /// Тип параметра и его ограничения. Ограничения проверяются на клиенте

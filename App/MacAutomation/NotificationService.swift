@@ -9,7 +9,15 @@ final class NotificationService: NotificationPosting {
         guard try await Self.ensureAuthorized() else {
             throw AutomationError.notificationsNotAllowed
         }
-        try await Self.deliver(title: title, message: message)
+        try await Self.deliver(title: title, message: message, after: nil)
+    }
+
+    /// Отложенное уведомление (таймер). Срабатывает, даже если NOVA свёрнута.
+    func schedule(after seconds: TimeInterval, title: String, message: String) async throws {
+        guard try await Self.ensureAuthorized() else {
+            throw AutomationError.notificationsNotAllowed
+        }
+        try await Self.deliver(title: title, message: message, after: seconds)
     }
 
     // nonisolated: объекты UserNotifications создаются и используются в одном контексте,
@@ -27,12 +35,13 @@ final class NotificationService: NotificationPosting {
         }
     }
 
-    private nonisolated static func deliver(title: String, message: String) async throws {
+    private nonisolated static func deliver(title: String, message: String, after seconds: TimeInterval?) async throws {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = message
         content.sound = .default
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        let trigger = seconds.map { UNTimeIntervalNotificationTrigger(timeInterval: max(1, $0), repeats: false) }
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
         try await UNUserNotificationCenter.current().add(request)
     }
 }

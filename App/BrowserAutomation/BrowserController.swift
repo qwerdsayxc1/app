@@ -24,6 +24,19 @@ final class BrowserController: BrowserControlling {
         }
     }
 
+    /// Вкладки через AppleScript-словари Safari/Chrome (macOS один раз спросит разрешение «Автоматизация»).
+    func performTabAction(_ action: TabAction, in browser: BrowserChoice) async throws -> String {
+        let (bundleID, name, script) = browser == .chrome
+            ? (Self.chromeBundleID, "Google Chrome", AppleScriptRunner.Script.chromeTab)
+            : (Self.safariBundleID, "Safari", AppleScriptRunner.Script.safariTab)
+        // Скрипт с `tell application "Google Chrome"` нельзя даже скомпилировать без установленного Chrome.
+        guard WorkspaceLauncher.applicationURL(bundleIdentifiers: [bundleID]) != nil else {
+            throw AutomationError.browserNotInstalled(name)
+        }
+        _ = try await AppleScriptRunner.run(script, arguments: [action.rawValue])
+        return name
+    }
+
     private func open(_ url: URL, bundleID: String, displayName: String) async throws {
         guard let browserURL = WorkspaceLauncher.applicationURL(bundleIdentifiers: [bundleID]) else {
             throw AutomationError.browserNotInstalled(displayName)

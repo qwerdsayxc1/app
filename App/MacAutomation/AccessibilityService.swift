@@ -67,6 +67,47 @@ final class AccessibilityService: WindowManaging {
         throw AutomationError.windowNotFound(application: app.localizedName ?? name, title: title)
     }
 
+    func performWindowAction(_ action: WindowAction, ofApplicationNamed name: String?) throws -> String {
+        guard isAccessibilityTrusted else { throw AutomationError.accessibilityNotGranted }
+        let app: NSRunningApplication
+        if let name {
+            guard let found = applications.runningApplication(named: name) else {
+                throw AutomationError.applicationNotRunning(name)
+            }
+            app = found
+        } else {
+            guard let frontmost = NSWorkspace.shared.frontmostApplication else {
+                throw AutomationError.applicationNotRunning("frontmost")
+            }
+            app = frontmost
+        }
+        let appName = app.localizedName ?? name ?? "?"
+        let element = Self.applicationElement(for: app)
+        let windows = Self.windows(of: app)
+
+        switch action {
+        case .restore:
+            guard let minimized = windows.first(where: { (Self.attribute($0, "AXMinimized") as? Bool) == true }) else {
+                throw AutomationError.noWindow(appName)
+            }
+            AXUIElementSetAttributeValue(minimized, "AXMinimized" as CFString, kCFBooleanFalse)
+            AXUIElementPerformAction(minimized, "AXRaise" as CFString)
+            app.activate()
+        case .minimize, .fullscreen, .exitFullscreen:
+            let focused = Self.attribute(element, "AXFocusedWindow").map { $0 as! AXUIElement } ?? windows.first
+            guard let window = focused else { throw AutomationError.noWindow(appName) }
+            switch action {
+            case .minimize:
+                AXUIElementSetAttributeValue(window, "AXMinimized" as CFString, kCFBooleanTrue)
+            case .fullscreen:
+                AXUIElementSetAttributeValue(window, "AXFullScreen" as CFString, kCFBooleanTrue)
+            default:
+                AXUIElementSetAttributeValue(window, "AXFullScreen" as CFString, kCFBooleanFalse)
+            }
+        }
+        return appName
+    }
+
     // MARK: - AX helpers
 
     private static func applicationElement(for app: NSRunningApplication) -> AXUIElement {

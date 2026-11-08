@@ -31,6 +31,6 @@
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>NOVA превращает вашу речь в текст команды. Если язык поддерживает распознавание на устройстве, звук не покидает Mac.</string>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>NOVA использует AppleScript только для управления громкостью звука.</string>
+	<string>NOVA управляет по вашей команде громкостью, музыкой (Music, Spotify), вкладками Safari и Chrome, напоминаниями и тёмной темой оформления.</string>
 </dict>
 </plist>

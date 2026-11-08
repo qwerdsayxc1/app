@@ -28,28 +28,152 @@ enum AppleScriptRunner {
             end if
         end run
         """
+
+        static let setDarkMode = """
+        on run argv
+            tell application "System Events" to tell appearance preferences to set dark mode to ((item 1 of argv) is "true")
+        end run
+        """
+
+        static let createReminder = """
+        on run argv
+            tell application "Reminders" to make new reminder with properties {name:(item 1 of argv)}
+        end run
+        """
+
+        // Музыка: отдельные скрипты для каждого плеера — словари команд разные.
+        static let musicControl = """
+        on run argv
+            set act to item 1 of argv
+            tell application "Music"
+                if act is "play" then
+                    play
+                else if act is "pause" then
+                    pause
+                else if act is "toggle" then
+                    playpause
+                else if act is "next" then
+                    next track
+                else if act is "previous" then
+                    previous track
+                end if
+            end tell
+        end run
+        """
+
+        static let spotifyControl = """
+        on run argv
+            set act to item 1 of argv
+            tell application "Spotify"
+                if act is "play" then
+                    play
+                else if act is "pause" then
+                    pause
+                else if act is "toggle" then
+                    playpause
+                else if act is "next" then
+                    next track
+                else if act is "previous" then
+                    previous track
+                end if
+            end tell
+        end run
+        """
+
+        /// "название||исполнитель||playing|paused|stopped"
+        static let musicNowPlaying = """
+        tell application "Music"
+            if player state is stopped then return "||||stopped"
+            set t to current track
+            return (name of t) & "||" & (artist of t) & "||" & (player state as text)
+        end tell
+        """
+
+        static let spotifyNowPlaying = """
+        tell application "Spotify"
+            if player state is stopped then return "||||stopped"
+            return (name of current track) & "||" & (artist of current track) & "||" & (player state as text)
+        end tell
+        """
+
+        static let safariTab = """
+        on run argv
+            set act to item 1 of argv
+            tell application "Safari"
+                activate
+                if (count of windows) is 0 then
+                    if act is "new_tab" then make new document
+                    return
+                end if
+                if act is "new_tab" then
+                    tell front window to set current tab to (make new tab)
+                else if act is "close_tab" then
+                    close current tab of front window
+                else if act is "reload" then
+                    set pageURL to URL of current tab of front window
+                    set URL of current tab of front window to pageURL
+                end if
+            end tell
+        end run
+        """
+
+        static let chromeTab = """
+        on run argv
+            set act to item 1 of argv
+            tell application "Google Chrome"
+                activate
+                if (count of windows) is 0 then
+                    if act is "new_tab" then make new window
+                    return
+                end if
+                if act is "new_tab" then
+                    make new tab at end of tabs of front window
+                else if act is "close_tab" then
+                    close active tab of front window
+                else if act is "reload" then
+                    reload active tab of front window
+                end if
+            end tell
+        end run
+        """
     }
 
+    /// Разбирает вывод скриптов now playing.
+    static func parseNowPlaying(_ output: String, player: String) -> NowPlaying? {
+        let parts = output.components(separatedBy: "||")
+        guard parts.count == 3, parts[2] != "stopped", !parts[0].isEmpty else { return nil }
+        return NowPlaying(title: parts[0], artist: parts[1], player: player, isPlaying: parts[2] == "playing")
+    }
+
+    static func run(_ source: String, arguments: [String] = []) async throws -> String {
+        try await ProcessRunner.run(executable: "/usr/bin/osascript", arguments: ["-e", source] + arguments)
+    }
+}
+
+/// Запуск системной утилиты по абсолютному пути с фиксированными аргументами
+/// (без shell, без подстановки строк). Используется для osascript, screencapture, pmset.
+enum ProcessRunner {
     struct Output: Sendable {
         let status: Int32
         let stdout: String
         let stderr: String
     }
 
-    static func run(_ source: String, arguments: [String] = []) async throws -> String {
-        let output = try await execute(source: source, arguments: arguments)
+    static func run(executable: String, arguments: [String]) async throws -> String {
+        let output = try await execute(executable: executable, arguments: arguments)
         guard output.status == 0 else {
             let message = output.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
-            throw AutomationError.scriptFailed(message.isEmpty ? "osascript exit \(output.status)" : message)
+            let tool = (executable as NSString).lastPathComponent
+            throw AutomationError.scriptFailed(message.isEmpty ? "\(tool) exit \(output.status)" : message)
         }
         return output.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static func execute(source: String, arguments: [String]) async throws -> Output {
+    private static func execute(executable: String, arguments: [String]) async throws -> Output {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Output, Error>) in
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            process.arguments = ["-e", source] + arguments
+            process.executableURL = URL(fileURLWithPath: executable)
+            process.arguments = arguments
             let stdoutPipe = Pipe()
             let stderrPipe = Pipe()
             process.standardOutput = stdoutPipe

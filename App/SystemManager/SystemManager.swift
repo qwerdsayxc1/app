@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 import IOKit.ps
 import NOVACore
 
@@ -81,6 +81,53 @@ final class SystemManager: SystemManaging {
             cpuCores: process.activeProcessorCount,
             uptimeSeconds: process.systemUptime
         )
+    }
+
+    // MARK: Оформление, экран, снимки, папки
+
+    /// Требует разрешения «Автоматизация → System Events» (macOS спросит один раз).
+    func setDarkMode(_ enabled: Bool) async throws {
+        _ = try await AppleScriptRunner.run(AppleScriptRunner.Script.setDarkMode, arguments: [enabled ? "true" : "false"])
+    }
+
+    /// `pmset displaysleepnow` работает без прав администратора.
+    func sleepDisplay() async throws {
+        _ = try await ProcessRunner.run(executable: "/usr/bin/pmset", arguments: ["displaysleepnow"])
+    }
+
+    /// Снимок всего экрана на Рабочий стол. Нужен доступ «Запись экрана»; файл никуда не отправляется.
+    func takeScreenshot() async throws -> URL {
+        let desktop = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first
+            ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Desktop")
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
+        let file = desktop.appendingPathComponent("NOVA Screenshot \(formatter.string(from: Date())).png")
+        // -x: без звука затвора. Путь передаётся отдельным аргументом, не через shell.
+        _ = try await ProcessRunner.run(executable: "/usr/sbin/screencapture", arguments: ["-x", file.path])
+        guard FileManager.default.fileExists(atPath: file.path) else {
+            throw AutomationError.scriptFailed("Screenshot was not saved. Allow NOVA AI in System Settings › Privacy & Security › Screen Recording.")
+        }
+        return file
+    }
+
+    func openFolder(_ folder: StandardFolder) throws -> URL {
+        let fileManager = FileManager.default
+        let url: URL?
+        switch folder {
+        case .home: url = fileManager.homeDirectoryForCurrentUser
+        case .desktop: url = fileManager.urls(for: .desktopDirectory, in: .userDomainMask).first
+        case .documents: url = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first
+        case .downloads: url = fileManager.urls(for: .downloadsDirectory, in: .userDomainMask).first
+        case .applications: url = URL(fileURLWithPath: "/Applications")
+        case .pictures: url = fileManager.urls(for: .picturesDirectory, in: .userDomainMask).first
+        case .music: url = fileManager.urls(for: .musicDirectory, in: .userDomainMask).first
+        case .movies: url = fileManager.urls(for: .moviesDirectory, in: .userDomainMask).first
+        }
+        guard let url, NSWorkspace.shared.open(url) else {
+            throw AutomationError.scriptFailed("Could not open folder \(folder.rawValue).")
+        }
+        return url
     }
 
     static func sysctlString(_ name: String) -> String? {

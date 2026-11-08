@@ -58,6 +58,45 @@ public enum EditorChoice: String, Sendable, CaseIterable {
     case xcode, intellij, vscode, finder
 }
 
+public enum MediaAction: String, Sendable, CaseIterable {
+    case play, pause, toggle, next, previous
+}
+
+public enum MediaPlayer: String, Sendable, CaseIterable {
+    case auto, music, spotify
+}
+
+public struct NowPlaying: Sendable, Equatable {
+    public let title: String
+    public let artist: String
+    public let player: String
+    public let isPlaying: Bool
+
+    public init(title: String, artist: String, player: String, isPlaying: Bool) {
+        self.title = title
+        self.artist = artist
+        self.player = player
+        self.isPlaying = isPlaying
+    }
+}
+
+public enum StandardFolder: String, Sendable, CaseIterable {
+    case home, desktop, documents, downloads, applications, pictures, music, movies
+}
+
+public enum WindowAction: String, Sendable, CaseIterable {
+    case minimize
+    case restore
+    case fullscreen
+    case exitFullscreen = "exit_fullscreen"
+}
+
+public enum TabAction: String, Sendable, CaseIterable {
+    case newTab = "new_tab"
+    case closeTab = "close_tab"
+    case reload
+}
+
 /// Ошибки автоматизации, понятные и пользователю, и модели.
 public enum AutomationError: Error, Equatable, Sendable, LocalizedError {
     case applicationNotFound(String)
@@ -72,6 +111,9 @@ public enum AutomationError: Error, Equatable, Sendable, LocalizedError {
     case projectNotFound(String)
     case editorNotInstalled(String)
     case cancelledByUser
+    case playerNotAvailable(String)
+    case noVideoFound(String)
+    case noWindow(String)
 
     public var errorDescription: String? {
         switch self {
@@ -87,6 +129,9 @@ public enum AutomationError: Error, Equatable, Sendable, LocalizedError {
         case .projectNotFound(let name): return "No project folder matching '\(name)' was found in the configured project folders."
         case .editorNotInstalled(let name): return "Editor '\(name)' is not installed."
         case .cancelledByUser: return "The user declined this action."
+        case .playerNotAvailable(let name): return "\(name) is not installed or not running."
+        case .noVideoFound(let query): return "No YouTube video found for '\(query)'."
+        case .noWindow(let application): return "\(application) has no suitable window."
         }
     }
 }
@@ -97,6 +142,7 @@ public protocol ApplicationManaging: AnyObject {
     func openApplication(named name: String) async throws -> String
     func quitApplication(named name: String) throws -> String
     func switchToApplication(named name: String) throws -> String
+    func hideApplication(named name: String) throws -> String
     func runningApplicationNames() -> [String]
     func frontmostApplicationName() -> String?
 }
@@ -104,6 +150,28 @@ public protocol ApplicationManaging: AnyObject {
 @MainActor
 public protocol BrowserControlling: AnyObject {
     func open(_ url: URL, in browser: BrowserChoice) async throws
+    /// Действие с вкладкой во фронтальном окне; возвращает название браузера.
+    func performTabAction(_ action: TabAction, in browser: BrowserChoice) async throws -> String
+}
+
+@MainActor
+public protocol MediaControlling: AnyObject {
+    /// Выполняет действие и возвращает имя плеера, которым управляли.
+    func perform(_ action: MediaAction, player: MediaPlayer) async throws -> String
+    /// nil — ничего не играет (или плееры не запущены).
+    func nowPlaying() async throws -> NowPlaying?
+}
+
+/// Поиск видео (для «включи видео …»). Sendable: выполняется вне главного потока.
+public protocol VideoSearching: Sendable {
+    func firstVideoURL(query: String) async throws -> URL
+}
+
+@MainActor
+public protocol ProductivityManaging: AnyObject {
+    /// Планирует уведомление и возвращает время срабатывания.
+    func scheduleTimer(minutes: Int, label: String) async throws -> Date
+    func createReminder(title: String) async throws
 }
 
 @MainActor
@@ -114,6 +182,12 @@ public protocol SystemManaging: AnyObject {
     func batteryStatus() throws -> BatteryStatus
     func diskSpace() throws -> DiskSpace
     func systemInfo() -> SystemInfo
+    func setDarkMode(_ enabled: Bool) async throws
+    func sleepDisplay() async throws
+    /// Снимок экрана на Рабочий стол; возвращает путь к файлу.
+    func takeScreenshot() async throws -> URL
+    /// Открывает папку в Finder; возвращает её путь.
+    func openFolder(_ folder: StandardFolder) throws -> URL
 }
 
 @MainActor
@@ -129,6 +203,8 @@ public protocol WindowManaging: AnyObject {
     func windowTitles(ofApplicationNamed name: String?) throws -> (application: String, titles: [String])
     /// Возвращает заголовок окна, которое было выведено на передний план.
     func focusWindow(ofApplicationNamed name: String, titleContaining title: String) throws -> String
+    /// Возвращает фактическое имя приложения.
+    func performWindowAction(_ action: WindowAction, ofApplicationNamed name: String?) throws -> String
 }
 
 @MainActor

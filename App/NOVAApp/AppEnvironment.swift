@@ -22,13 +22,17 @@ final class AppEnvironment {
 
         // MacAutomation
         let applications = ApplicationManager()
+        let notifications = NotificationService()
         let services = ToolServices(
             applications: applications,
             browser: BrowserController(),
             system: SystemManager(),
-            notifications: NotificationService(),
+            notifications: notifications,
             windows: AccessibilityService(applications: applications),
             projects: ProjectOpener(),
+            media: MediaController(),
+            videos: YouTubeSearchService(),
+            productivity: ProductivityService(notifications: notifications),
             settings: currentSettings
         )
         let toolManager = ToolManager(

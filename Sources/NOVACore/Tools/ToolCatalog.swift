@@ -3,9 +3,15 @@ import Foundation
 /// Каталог (белый список) инструментов NOVA AI с описаниями и схемами.
 public enum ToolCatalog {
     public static let knownWebsites = ["youtube", "github", "google", "apple", "wikipedia", "stackoverflow", "gmail", "maps"]
-    public static let searchEngines = ["google", "youtube", "github"]
+    public static let searchEngines = ["google", "youtube", "github", "wikipedia", "maps", "images", "translate"]
     public static let browsers = ["safari", "chrome", "default"]
     public static let editors = ["xcode", "intellij", "vscode", "finder"]
+    public static let mediaActions = MediaAction.allCases.map(\.rawValue)
+    public static let mediaPlayers = MediaPlayer.allCases.map(\.rawValue)
+    public static let folders = StandardFolder.allCases.map(\.rawValue)
+    public static let windowActions = WindowAction.allCases.map(\.rawValue)
+    public static let tabActions = TabAction.allCases.map(\.rawValue)
+    public static let tabBrowsers = ["safari", "chrome"]
 
     public static let all: [ToolDefinition] = [
         // MARK: Приложения
@@ -55,7 +61,7 @@ public enum ToolCatalog {
         ),
         ToolDefinition(
             name: .webSearch,
-            description: "Search the web: Google search, YouTube video search or GitHub repository search. Opens the results page in the browser.",
+            description: "Search the web and open the results page in the browser: google (web), youtube (list of videos), github (repositories), wikipedia (article search in the user's language), maps (places, addresses, routes), images (Google Images), translate (Google Translate of the query into the user's language).",
             parameters: [
                 ToolParameter("engine", "Where to search.", .string(maxLength: 16, allowedValues: searchEngines)),
                 ToolParameter("query", "Search query, in the language the user used.", .string(maxLength: 300)),
@@ -138,6 +144,100 @@ public enum ToolCatalog {
             parameters: [
                 ToolParameter("project_name", "Project name as the user said it.", .string(maxLength: 120)),
                 ToolParameter("editor", "Editor to open the project in.", .string(maxLength: 16, allowedValues: editors))
+            ]
+        ),
+
+        // MARK: Медиа
+        ToolDefinition(
+            name: .playYouTubeVideo,
+            description: "Find a YouTube video by its title or topic and open (play) the FIRST matching video directly. Use when the user wants to watch/play a specific video; use web_search with engine 'youtube' when they want to browse a list of results.",
+            parameters: [
+                ToolParameter("query", "Video title or search phrase, in the language the user used.", .string(maxLength: 300)),
+                ToolParameter("browser", "Browser to use; 'default' uses the user's preference.", .string(maxLength: 16, allowedValues: browsers), required: false)
+            ]
+        ),
+        ToolDefinition(
+            name: .mediaControl,
+            description: "Control music playback in Apple Music or Spotify: play, pause, toggle play/pause, next or previous track. 'auto' uses Spotify if it is running, otherwise Apple Music.",
+            parameters: [
+                ToolParameter("action", "Playback action.", .string(maxLength: 16, allowedValues: mediaActions)),
+                ToolParameter("player", "Which player to control.", .string(maxLength: 16, allowedValues: mediaPlayers), required: false)
+            ]
+        ),
+        ToolDefinition(
+            name: .nowPlaying,
+            description: "Get the track currently playing in Apple Music or Spotify (title, artist, playing or paused)."
+        ),
+
+        // MARK: Вкладки
+        ToolDefinition(
+            name: .browserTab,
+            description: "Control tabs in Safari or Google Chrome: open a new tab, close the current tab, or reload the current tab.",
+            parameters: [
+                ToolParameter("action", "Tab action.", .string(maxLength: 16, allowedValues: tabActions)),
+                ToolParameter("browser", "Browser whose front window to control.", .string(maxLength: 16, allowedValues: tabBrowsers))
+            ]
+        ),
+
+        // MARK: Продуктивность
+        ToolDefinition(
+            name: .getDateTime,
+            description: "Get the current local date, time, weekday and time zone of this Mac."
+        ),
+        ToolDefinition(
+            name: .setTimer,
+            description: "Start a timer: NOVA shows a notification with a sound when the time is up.",
+            parameters: [
+                ToolParameter("minutes", "Timer duration in minutes.", .integer(min: 1, max: 1440)),
+                ToolParameter("label", "Short text for the notification, e.g. 'Tea is ready'.", .string(maxLength: 120), required: false)
+            ]
+        ),
+        ToolDefinition(
+            name: .createReminder,
+            description: "Create a new reminder in the Apple Reminders app (default list).",
+            parameters: [
+                ToolParameter("title", "Reminder text.", .string(maxLength: 200))
+            ]
+        ),
+
+        // MARK: Система (дополнительно)
+        ToolDefinition(
+            name: .openFolder,
+            description: "Open a standard folder in Finder: home, desktop, documents, downloads, applications, pictures, music or movies.",
+            parameters: [
+                ToolParameter("folder", "Folder to open.", .string(maxLength: 16, allowedValues: folders))
+            ]
+        ),
+        ToolDefinition(
+            name: .takeScreenshot,
+            description: "Take a screenshot of the whole screen and save it as a PNG file on the Desktop. The image is NOT sent anywhere. Requires Screen Recording permission."
+        ),
+        ToolDefinition(
+            name: .setDarkMode,
+            description: "Switch macOS appearance to dark mode (true) or light mode (false).",
+            parameters: [
+                ToolParameter("enabled", "true for dark mode, false for light mode.", .boolean)
+            ]
+        ),
+        ToolDefinition(
+            name: .sleepDisplay,
+            description: "Turn off the display now (the Mac locks if a password is required after sleep)."
+        ),
+
+        // MARK: Приложения и окна (дополнительно)
+        ToolDefinition(
+            name: .hideApplication,
+            description: "Hide a running application's windows (like Cmd+H). The app keeps running.",
+            parameters: [
+                ToolParameter("name", "Name of the running application.", .string(maxLength: 80))
+            ]
+        ),
+        ToolDefinition(
+            name: .windowAction,
+            description: "Minimize, restore (un-minimize), enter or exit full screen for the focused window of an application (frontmost app if omitted). Requires Accessibility permission.",
+            parameters: [
+                ToolParameter("action", "Window action.", .string(maxLength: 20, allowedValues: windowActions)),
+                ToolParameter("application", "Application name; omit for the frontmost app.", .string(maxLength: 80), required: false)
             ]
         )
     ]

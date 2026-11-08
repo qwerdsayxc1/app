@@ -142,6 +142,15 @@ final class FakeApplications: ApplicationManaging {
         return app
     }
 
+    var hidden: [String] = []
+    func hideApplication(named name: String) throws -> String {
+        guard let app = running.first(where: { $0.lowercased() == name.lowercased() }) else {
+            throw AutomationError.applicationNotRunning(name)
+        }
+        hidden.append(app)
+        return app
+    }
+
     func runningApplicationNames() -> [String] { running }
     func frontmostApplicationName() -> String? { frontmost }
 }
@@ -149,9 +158,41 @@ final class FakeApplications: ApplicationManaging {
 @MainActor
 final class FakeBrowser: BrowserControlling {
     var opened: [(URL, BrowserChoice)] = []
+    var tabActions: [(TabAction, BrowserChoice)] = []
     func open(_ url: URL, in browser: BrowserChoice) async throws {
         opened.append((url, browser))
     }
+    func performTabAction(_ action: TabAction, in browser: BrowserChoice) async throws -> String {
+        tabActions.append((action, browser))
+        return browser == .chrome ? "Google Chrome" : "Safari"
+    }
+}
+
+@MainActor
+final class FakeMedia: MediaControlling {
+    var actions: [(MediaAction, MediaPlayer)] = []
+    var current: NowPlaying? = NowPlaying(title: "Bohemian Rhapsody", artist: "Queen", player: "Music", isPlaying: true)
+    func perform(_ action: MediaAction, player: MediaPlayer) async throws -> String {
+        actions.append((action, player))
+        return player == .spotify ? "Spotify" : "Music"
+    }
+    func nowPlaying() async throws -> NowPlaying? { current }
+}
+
+final class FakeVideos: VideoSearching, @unchecked Sendable {
+    var result: Result<URL, Error> = .success(URL(string: "https://www.youtube.com/watch?v=dQw4w9WgXcQ")!)
+    func firstVideoURL(query: String) async throws -> URL { try result.get() }
+}
+
+@MainActor
+final class FakeProductivity: ProductivityManaging {
+    var timers: [(Int, String)] = []
+    var reminders: [String] = []
+    func scheduleTimer(minutes: Int, label: String) async throws -> Date {
+        timers.append((minutes, label))
+        return Date(timeIntervalSince1970: 0).addingTimeInterval(Double(minutes) * 60)
+    }
+    func createReminder(title: String) async throws { reminders.append(title) }
 }
 
 @MainActor
@@ -170,6 +211,20 @@ final class FakeSystem: SystemManaging {
     func diskSpace() throws -> DiskSpace { DiskSpace(availableBytes: 250_000_000_000, totalBytes: 1_000_000_000_000) }
     func systemInfo() -> SystemInfo {
         SystemInfo(osVersion: "macOS 15.1", modelIdentifier: "Mac15,6", chip: "Apple M3 Pro", memoryBytes: 18_000_000_000, cpuCores: 11, uptimeSeconds: 7200)
+    }
+    var darkMode = false
+    var displaySleeping = false
+    var screenshots = 0
+    var openedFolders: [StandardFolder] = []
+    func setDarkMode(_ enabled: Bool) async throws { darkMode = enabled }
+    func sleepDisplay() async throws { displaySleeping = true }
+    func takeScreenshot() async throws -> URL {
+        screenshots += 1
+        return URL(fileURLWithPath: "/Users/test/Desktop/NOVA Screenshot.png")
+    }
+    func openFolder(_ folder: StandardFolder) throws -> URL {
+        openedFolders.append(folder)
+        return URL(fileURLWithPath: "/Users/test/\(folder.rawValue.capitalized)")
     }
 }
 
@@ -198,6 +253,13 @@ final class FakeWindows: WindowManaging {
             throw AutomationError.windowNotFound(application: name, title: title)
         }
         return match
+    }
+
+    var windowActions: [(WindowAction, String?)] = []
+    func performWindowAction(_ action: WindowAction, ofApplicationNamed name: String?) throws -> String {
+        guard isAccessibilityTrusted else { throw AutomationError.accessibilityNotGranted }
+        windowActions.append((action, name))
+        return name ?? "Safari"
     }
 }
 
@@ -229,10 +291,16 @@ struct FakeEnvironment {
     let notifications = FakeNotifications()
     let windows = FakeWindows()
     let projects = FakeProjects()
+    let media = FakeMedia()
+    let videos = FakeVideos()
+    let productivity = FakeProductivity()
     var settings = AppSettings(cloudProcessingConsent: true)
+    /// 2026-03-15 14:05 UTC, воскресенье.
+    var now = Date(timeIntervalSince1970: 1_773_583_500)
 
     func services() -> ToolServices {
         let settings = self.settings
+        let now = self.now
         return ToolServices(
             applications: apps,
             browser: browser,
@@ -240,7 +308,12 @@ struct FakeEnvironment {
             notifications: notifications,
             windows: windows,
             projects: projects,
-            settings: { settings }
+            media: media,
+            videos: videos,
+            productivity: productivity,
+            settings: { settings },
+            now: { now },
+            timeZone: TimeZone(identifier: "UTC")!
         )
     }
 

@@ -57,6 +57,14 @@ final class ApplicationManager: ApplicationManaging {
         return app.localizedName ?? name
     }
 
+    func hideApplication(named name: String) throws -> String {
+        guard let app = runningApplication(named: name) else {
+            throw AutomationError.applicationNotRunning(name)
+        }
+        app.hide()
+        return app.localizedName ?? name
+    }
+
     func runningApplicationNames() -> [String] {
         var seen = Set<String>()
         return workspace.runningApplications
