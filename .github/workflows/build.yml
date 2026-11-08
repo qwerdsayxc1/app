@@ -80,13 +80,31 @@ jobs:
           mkdir -p "$OUT"
           # Подпись ad-hoc, чтобы macOS разрешила запуск и учла entitlements.
           codesign --force --deep --sign - --entitlements App/Resources/NOVA.entitlements "$APP" || true
-          "$APP/Contents/MacOS/NOVA AI" --self-test "$OUT" > "$OUT/app-log.txt" 2>&1 &
+          # Запуск под lldb: при падении печатается стек вызовов с файлами и строками.
+          lldb --batch \
+            -o "run" \
+            -k "thread backtrace all" \
+            -k "quit 1" \
+            -- "$APP/Contents/MacOS/NOVA AI" --self-test "$OUT" > "$OUT/app-log.txt" 2>&1 &
           PID=$!
-          for i in $(seq 1 330); do
+          for i in $(seq 1 360); do
             kill -0 "$PID" 2>/dev/null || break
             sleep 1
           done
           kill "$PID" 2>/dev/null || true
+          pkill -f "NOVA AI" 2>/dev/null || true
+          cp ~/Library/Logs/DiagnosticReports/NOVA* "$OUT/" 2>/dev/null || true
+          echo "===== app-log.txt ====="
+          cat "$OUT/app-log.txt" || true
+          if grep -q "stop reason" "$OUT/app-log.txt" 2>/dev/null; then
+            {
+              echo "## NOVA AI упала при запуске"
+              echo '```'
+              grep -E "stop reason|frame #[0-9]+:.*NOVA|Fatal error|fatal error|Thread [0-9]+ Crashed|error:" "$OUT/app-log.txt" | head -40
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error title=self-test crash::NOVA AI упала при запуске — стек вызовов в логе шага и в Summary"
+          fi
           if [ -f "$OUT/report.md" ]; then
             cat "$OUT/report.md"
             cat "$OUT/report.md" >> "$GITHUB_STEP_SUMMARY"
