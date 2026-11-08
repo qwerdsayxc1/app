@@ -4,7 +4,7 @@
 
 Стек: Swift 6, SwiftUI (+ AppKit), Speech, AVFoundation, AVSpeechSynthesizer, Claude API (tool use в strict-режиме), AppleScript, Accessibility API, Keychain, SwiftData. Без Electron и без веба.
 
-> ⚠️ **Статус сборки.** Код написан на Windows, где нет Xcode и Swift toolchain, поэтому **ни разу не компилировался и не запускался**. Мы аккуратно сверялись с API Apple и строгой конкурентностью Swift 6, но при первой сборке на Mac возможны мелкие ошибки компиляции (см. «Известные риски»). Начните с `swift test`, затем соберите приложение в Xcode.
+> **Статус сборки.** GitHub Actions (`macos-15`, Apple Silicon, Xcode 16, Swift 6) проверяет каждый push: `swift test` проходит, приложение собирается через `xcodebuild` (см. `.github/workflows/build.yml`). **Вживую на Mac приложение ещё не запускалось**: микрофон, озвучка, разрешения macOS и сами действия над системой нужно проверить на реальном компьютере.
 
 ---
 
@@ -165,9 +165,9 @@ tccutil reset Accessibility ai.nova.assistant
 - память: запись, порядок, лимиты, очистка, контекст разговора;
 - алиасы приложений, URL, поиск проектов во временных каталогах, настройки, API-ключ, голосовое «да/нет».
 
-## Известные риски первой сборки
+## Что проверить при первом запуске на Mac
 
-Код не компилировался; если Xcode выдаст ошибку, вероятнее всего она здесь:
+Сборка и тесты проходят в CI. Если на вашей версии Xcode/macOS что-то поведёт себя иначе, вероятнее всего это здесь:
 
 - **Аннотации изоляции и `Sendable` в SDK** (`NSWorkspace`, `AVAudioNodeTapBlock`, `UNUserNotificationCenter`). Колбэки создаются в `nonisolated`-функциях и передают наружу только Sendable-значения; если SDK помечает API иначе, правки точечные.
 - **IOKit Power Sources** (`SystemManager.batteryStatus`): константы `kIOPS…Key` при необходимости заменяются строками `"Current Capacity"`, `"Max Capacity"` и т.д.
