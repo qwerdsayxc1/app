@@ -62,17 +62,16 @@ final class ScriptedClaude: ClaudeMessaging, @unchecked Sendable {
     }
 
     func send(system: String, messages: [JSONValue], tools: [ToolDefinition], configuration: ClaudeConfiguration) async throws -> ClaudeResponse {
-        let next: Result<ClaudeResponse, Error>
-        lock.lock()
-        receivedMessages.append(messages)
-        receivedTools.append(tools)
-        receivedConfigurations.append(configuration)
-        guard !responses.isEmpty else {
-            lock.unlock()
+        // NSLock.lock()/unlock() недоступны в async-контексте Swift 6 — используем withLock.
+        let next: Result<ClaudeResponse, Error>? = lock.withLock {
+            receivedMessages.append(messages)
+            receivedTools.append(tools)
+            receivedConfigurations.append(configuration)
+            return responses.isEmpty ? nil : responses.removeFirst()
+        }
+        guard let next else {
             throw ClaudeAPIError.invalidResponse("script exhausted")
         }
-        next = responses.removeFirst()
-        lock.unlock()
         return try next.get()
     }
 }
@@ -95,10 +94,10 @@ final class MockTransport: HTTPTransport, @unchecked Sendable {
     }
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        lock.lock()
-        requests.append(request)
-        let reply = replies.isEmpty ? nil : replies.removeFirst()
-        lock.unlock()
+        let reply: Reply? = lock.withLock {
+            requests.append(request)
+            return replies.isEmpty ? nil : replies.removeFirst()
+        }
         guard let reply else { throw URLError(.notConnectedToInternet) }
         let response = HTTPURLResponse(
             url: request.url!,
