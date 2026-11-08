@@ -100,8 +100,13 @@ public struct ToolDefinition: Sendable, Equatable {
         parameters.first { $0.name == name }
     }
 
-    /// Определение инструмента для Messages API в strict-режиме:
-    /// `strict: true`, `additionalProperties: false`, полный список `required`.
+    /// Определение инструмента для Messages API: закрытая схема
+    /// (`additionalProperties: false`, полный список `required`).
+    ///
+    /// `strict: true` не используется: API ограничивает число strict-инструментов в запросе
+    /// (у NOVA их 32 — запрос отклонялся). Корректность аргументов гарантирует
+    /// `ToolArgumentValidator` на клиенте: невалидный вызов не выполняется,
+    /// а модель получает `is_error` с описанием и исправляет вызов.
     public func apiDefinition() -> JSONValue {
         var properties: [String: JSONValue] = [:]
         for parameter in parameters {
@@ -111,7 +116,6 @@ public struct ToolDefinition: Sendable, Equatable {
         return [
             "name": .string(name.rawValue),
             "description": .string(description),
-            "strict": true,
             "input_schema": [
                 "type": "object",
                 "properties": .object(properties),

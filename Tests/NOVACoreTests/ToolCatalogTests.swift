@@ -12,7 +12,8 @@ final class ToolCatalogTests: XCTestCase {
         for definition in ToolCatalog.all {
             let api = definition.apiDefinition()
             XCTAssertEqual(api["name"]?.stringValue, definition.name.rawValue)
-            XCTAssertEqual(api["strict"]?.boolValue, true, definition.name.rawValue)
+            // strict не отправляем: API ограничивает число strict-инструментов (у нас их 32).
+            XCTAssertNil(api["strict"], definition.name.rawValue)
             let schema = try XCTUnwrap(api["input_schema"])
             XCTAssertEqual(schema["type"]?.stringValue, "object")
             XCTAssertEqual(schema["additionalProperties"]?.boolValue, false)

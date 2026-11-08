@@ -7,7 +7,7 @@ import Foundation
 /// - `thinking` не передаём: на Opus 5.5 / Sonnet 5.5 адаптивное мышление включено по умолчанию,
 ///   а `disabled` даёт 400. Глубину регулируем `output_config.effort`.
 /// - `tool_choice: auto` — принудительный `any`/`tool` на этих моделях запрещён (400).
-/// - Инструменты в strict-режиме; порядок инструментов и системный промпт стабильны → кеш промпта.
+/// - Закрытые схемы инструментов (без strict: лимит API на число strict-инструментов); порядок инструментов и системный промпт стабильны → кеш промпта.
 /// - Серверный fallback при отказе: `fallbacks: "default"` + beta-заголовок.
 public struct ClaudeRequestBuilder: Sendable {
     public let configuration: ClaudeConfiguration
