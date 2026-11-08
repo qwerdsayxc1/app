@@ -39,9 +39,13 @@ final class StoredCommand {
 /// Постоянная память на SwiftData (локально, в контейнере приложения; никуда не синхронизируется).
 @MainActor
 final class SwiftDataMemoryStore: MemoryStore {
+    /// Контейнер обязательно удерживаем сами: ModelContext не владеет им, и если контейнер
+    /// освободится, первый же fetch аварийно завершит приложение (найдено самопроверкой в CI).
+    private let container: ModelContainer
     private let context: ModelContext
 
     init(container: ModelContainer) {
+        self.container = container
         self.context = container.mainContext
     }
 
