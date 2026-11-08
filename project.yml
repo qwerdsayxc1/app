@@ -1,0 +1,66 @@
+# XcodeGen: `xcodegen generate` создаёт NOVA.xcodeproj из этого файла.
+# Секретов здесь нет: API-ключ вводится в приложении и хранится в Keychain.
+name: NOVA
+
+options:
+  bundleIdPrefix: ai.nova
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  developmentLanguage: ru
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    ARCHS: arm64
+    ONLY_ACTIVE_ARCH: YES
+
+packages:
+  NOVACore:
+    path: .
+
+targets:
+  NOVA:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+        excludes:
+          - "Resources/Info.plist"
+          - "Resources/*.entitlements"
+    dependencies:
+      - package: NOVACore
+        product: NOVACore
+    settings:
+      base:
+        PRODUCT_NAME: "NOVA AI"
+        PRODUCT_MODULE_NAME: NOVA
+        PRODUCT_BUNDLE_IDENTIFIER: ai.nova.assistant
+        INFOPLIST_FILE: App/Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: App/Resources/NOVA.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_STYLE: Automatic
+        # "-" = Sign to Run Locally. Для стабильных разрешений TCC укажите свою команду:
+        # DEVELOPMENT_TEAM: XXXXXXXXXX
+        CODE_SIGN_IDENTITY: "-"
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_STRICT_CONCURRENCY: complete
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+        DEAD_CODE_STRIPPING: YES
+
+schemes:
+  NOVA:
+    build:
+      targets:
+        NOVA: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - package: NOVACore/NOVACoreTests
+    archive:
+      config: Release

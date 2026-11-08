@@ -1,0 +1,18 @@
+# SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode (проект генерируется XcodeGen из project.yml)
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+build/
+
+# macOS
+.DS_Store
+
+# Секреты никогда не коммитим
+*.env
+.env*
