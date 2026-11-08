@@ -1,0 +1,63 @@
+# Проверка сборки на macOS-машине GitHub (Apple Silicon).
+# Секреты не нужны: тесты не обращаются к Claude API, приложение собирается без подписи.
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-tests:
+    name: NOVACore — swift test
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Build & test
+        run: swift test 2>&1 | tee swift-test.log
+        shell: bash -o pipefail {0}
+      - name: Upload log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: swift-test-log
+          path: swift-test.log
+
+  app-build:
+    name: NOVA.app — xcodebuild
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      - name: Build app
+        shell: bash -o pipefail {0}
+        run: |
+          xcodebuild \
+            -project NOVA.xcodeproj \
+            -scheme NOVA \
+            -configuration Debug \
+            -destination 'platform=macOS,arch=arm64' \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee xcodebuild.log
+      - name: Show errors
+        if: failure()
+        run: grep -E "error:|warning: .*concurrency" xcodebuild.log | sort -u | head -100 || true
+      - name: Upload log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: xcodebuild.log
