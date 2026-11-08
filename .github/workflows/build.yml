@@ -121,3 +121,34 @@ jobs:
           name: self-test
           path: self-test
           if-no-files-found: warn
+
+      # Готовое приложение для запуска на любом Mac без Xcode (Apple Silicon + Intel).
+      - name: Build release app (universal)
+        shell: bash -o pipefail {0}
+        run: |
+          xcodebuild \
+            -project NOVA.xcodeproj \
+            -scheme NOVA \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath build-release \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tail -20
+      - name: Package NOVA-AI.zip
+        shell: bash
+        run: |
+          APP="build-release/Build/Products/Release/NOVA AI.app"
+          codesign --force --deep --options runtime --sign - --entitlements App/Resources/NOVA.entitlements "$APP"
+          codesign --verify --verbose "$APP"
+          lipo -info "$APP/Contents/MacOS/NOVA AI"
+          mkdir -p dist
+          ditto -c -k --keepParent "$APP" "dist/NOVA-AI.zip"
+          ls -lh dist
+      - name: Upload NOVA-AI.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOVA-AI-macOS
+          path: dist/NOVA-AI.zip
+          if-no-files-found: error
